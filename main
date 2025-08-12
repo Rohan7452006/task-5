@@ -1,0 +1,91 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
+# Load the dataset
+df = pd.read_csv("heart.csv")
+
+# Display basic information about the dataset
+print("Initial Data Info:")
+df.info()
+
+# Display the first few rows of the dataset
+print("\nFirst 5 rows of the data:")
+print(df.head())
+
+# Drop rows with any missing values, if any.
+df = df.dropna()
+
+# Separate features (X) and target (y)
+X = df.drop(columns=['target'])
+y = df['target']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# ----------------- Step 1: Decision Tree Classifier -----------------
+# Train a Decision Tree model with no depth limit
+dtree = DecisionTreeClassifier(random_state=42)
+dtree.fit(X_train, y_train)
+
+# Visualize the tree
+plt.figure(figsize=(20, 10))
+plot_tree(dtree, filled=True, feature_names=X.columns.tolist(), class_names=['Healthy', 'Heart Disease'], rounded=True)
+plt.title('Decision Tree Classifier (No Depth Limit)')
+plt.savefig('decision_tree_full.png')
+
+# ----------------- Step 2: Analyze Overfitting and Control Tree Depth -----------------
+# Evaluate the full tree
+y_pred_full = dtree.predict(X_test)
+accuracy_full = accuracy_score(y_test, y_pred_full)
+print(f"Accuracy of Decision Tree (no depth limit): {accuracy_full:.4f}")
+
+# Train a Decision Tree with a controlled depth
+dtree_limited = DecisionTreeClassifier(max_depth=3, random_state=42)
+dtree_limited.fit(X_train, y_train)
+
+# Visualize the limited depth tree
+plt.figure(figsize=(15, 8))
+plot_tree(dtree_limited, filled=True, feature_names=X.columns.tolist(), class_names=['Healthy', 'Heart Disease'], rounded=True)
+plt.title('Decision Tree Classifier (Max Depth = 3)')
+plt.savefig('decision_tree_limited.png')
+
+# Evaluate the limited depth tree
+y_pred_limited = dtree_limited.predict(X_test)
+accuracy_limited = accuracy_score(y_test, y_pred_limited)
+print(f"Accuracy of Decision Tree (max_depth=3): {accuracy_limited:.4f}")
+
+# ----------------- Step 3: Train a Random Forest and compare accuracy -----------------
+# Train a Random Forest model
+rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
+
+# Evaluate the Random Forest model
+y_pred_rf = rf_model.predict(X_test)
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+print(f"\nAccuracy of Random Forest Classifier: {accuracy_rf:.4f}")
+
+# ----------------- Step 4: Interpret Feature Importances -----------------
+# Get feature importances
+feature_importances = pd.Series(rf_model.feature_importances_, index=X.columns).sort_values(ascending=False)
+
+# Plot feature importances
+plt.figure(figsize=(12, 8))
+sns.barplot(x=feature_importances, y=feature_importances.index, palette='viridis')
+plt.title('Feature Importances from Random Forest')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.tight_layout()
+plt.savefig('feature_importances.png')
+
+# ----------------- Step 5: Evaluate using cross-validation -----------------
+# Evaluate the Random Forest model using cross-validation
+cv_scores = cross_val_score(rf_model, X, y, cv=5)
+print("\nCross-validation scores for Random Forest:")
+print(cv_scores)
+print(f"Mean cross-validation score: {np.mean(cv_scores):.4f}")
+print(f"Standard deviation of cross-validation scores: {np.std(cv_scores):.4f}")
